@@ -1,11 +1,11 @@
 export const theme = {
   colors: {
     primary: {
-      main: 'bg-[#466E9B]', // Steel Blue from reference image
-      hover: 'hover:bg-[#36587d]',
-      text: 'text-[#466E9B]',
-      bgLight: 'bg-[#466E9B]/10',
-      border: 'border-[#466E9B]',
+      main: 'bg-[#3271ae]',
+      hover: 'hover:bg-[#245d9a]',
+      text: 'text-[#3271ae]',
+      bgLight: 'bg-[#3271ae]/10',
+      border: 'border-[#3271ae]',
     },
     accent: {
       main: 'bg-[#FFC107]', // Vibrant Yellow
@@ -29,7 +29,7 @@ export const theme = {
       success: 'text-emerald-700 bg-emerald-50 border-emerald-200',
       error: 'text-rose-700 bg-rose-50 border-rose-200',
       warning: 'text-amber-700 bg-amber-50 border-amber-200',
-      info: 'text-[#466E9B] bg-[#466E9B]/5 border-[#466E9B]/20',
+      info: 'text-[#3271ae] bg-[#3271ae]/5 border-[#3271ae]/20',
     }
   },
   typography: {
@@ -41,8 +41,8 @@ export const theme = {
     label: 'text-xs font-semibold text-slate-500 uppercase tracking-wide',
   },
   layout: {
-    radius: 'rounded-md', // Subtle 6px rounding
-    card: 'bg-white rounded-md shadow-sm border border-slate-200',
+    radius: 'rounded-xl',
+    card: 'bg-white rounded-xl shadow-sm border border-slate-200',
     screenPadding: 'p-4',
     screen: 'flex-1 flex flex-col w-full bg-slate-50 overflow-hidden',
   },

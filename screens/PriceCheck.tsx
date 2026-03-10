@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { FuelProduct } from '../types';
 import { Check, Tag, X } from 'lucide-react';
 import { Button } from '../components/UI';
 import { theme } from '../theme';
+import { MOCK_FUEL_PRODUCTS } from '../mockData';
+import { getFuelColor } from '../config/fuelProducts';
 
 interface PriceCheckProps {
   onClose: () => void;
@@ -10,28 +11,14 @@ interface PriceCheckProps {
 
 export const PriceCheckScreen: React.FC<PriceCheckProps> = ({ onClose }) => {
   const [hasChanges] = useState(false); // Mock state to disable button
-
-  const products: FuelProduct[] = [
-    { name: 'EA95', price: 1.12, currency: 'USD', secondPrice: 4500, secondCurrency: 'KHR' },
-    { name: 'EA92', price: 0.97, currency: 'USD', secondPrice: 3900, secondCurrency: 'KHR' },
-    { name: 'DO', price: 0.93, currency: 'USD', secondPrice: 3750, secondCurrency: 'KHR' },
-  ];
-
-  const getProductColor = (name: string) => {
-      switch(name) {
-          case 'EA95': return 'bg-amber-500';
-          case 'EA92': return 'bg-blue-700';
-          case 'DO': return 'bg-red-700';
-          default: return 'bg-slate-800';
-      }
-  };
+  const products = MOCK_FUEL_PRODUCTS;
 
   return (
-    <div className="absolute inset-0 z-50 bg-white flex flex-col animate-slide-up">
+    <div className="flex-1 flex flex-col bg-white overflow-hidden animate-slide-up">
         {/* Full Width Header with Cross Button - Removed Divider */}
         <div className="flex justify-between items-center p-5 shrink-0">
             <div className="flex items-center gap-3">
-                 <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
+                 <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#3271ae', color: 'white' }}>
                     <Tag size={20} />
                 </div>
                 <div>
@@ -58,7 +45,7 @@ export const PriceCheckScreen: React.FC<PriceCheckProps> = ({ onClose }) => {
                         {products.map((p) => (
                             <tr key={p.name} className="group hover:bg-slate-50 transition-colors relative overflow-hidden">
                                 <td className="px-4 py-4 font-bold text-slate-800 relative">
-                                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${getProductColor(p.name)}`}></div>
+                                    <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: getFuelColor(p.name) }} />
                                     {p.name}
                                 </td>
                                 <td className="px-4 py-4 text-right text-slate-700 font-mono text-base">{p.price.toFixed(2)}</td>

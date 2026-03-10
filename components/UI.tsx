@@ -26,11 +26,11 @@ export const Button: React.FC<ButtonProps> = ({
   const baseStyles = `flex items-center justify-center gap-2 font-semibold ${theme.layout.radius} transition-all ${theme.animation.click} ${sizeStyles[size]}`;
   
   const variants = {
-    // Primary: Steel Blue
-    primary: "bg-[#466E9B] text-white hover:bg-[#36587d] shadow-sm border border-transparent",
-    
+    // Primary: DAE Blue
+    primary: "bg-[#3271ae] text-white hover:bg-[#245d9a] shadow-sm border border-transparent",
+
     // Accent: Yellow with dark text
-    accent: "bg-[#FFC107] text-[#466E9B] hover:bg-[#e0a800] shadow-sm border border-transparent",
+    accent: "bg-[#FFC107] text-[#3271ae] hover:bg-[#e0a800] shadow-sm border border-transparent",
 
     // Secondary: Strictly Neutral (Gray/Slate)
     secondary: "bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200",
@@ -72,7 +72,7 @@ export const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { ico
         </div>
       )}
       <input 
-        className={`block w-full ${icon ? 'pl-10' : 'pl-3'} pr-3 py-3 border border-slate-300 ${theme.layout.radius} leading-5 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#466E9B]/20 focus:border-[#466E9B] transition-all text-sm font-medium ${className}`}
+        className={`block w-full ${icon ? 'pl-10' : 'pl-3'} pr-3 py-3 border border-slate-300 ${theme.layout.radius} leading-5 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#3271ae]/20 focus:border-[#3271ae] transition-all text-sm font-medium ${className}`}
         {...props}
       />
     </div>
@@ -80,9 +80,20 @@ export const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { ico
 );
 
 export const ModalOverlay: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-    <div className={`bg-white w-full ${theme.layout.radius} shadow-xl p-6 animate-scale-in relative border border-slate-100`}>
+  <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm animate-fade-in">
+    <div className={`bg-white w-full rounded-2xl shadow-2xl p-6 animate-scale-in relative`}>
       {children}
     </div>
   </div>
 );
+
+export const Toast: React.FC<{ message: string | null }> = ({ message }) => {
+  if (!message) return null;
+  return (
+    <div className="absolute bottom-20 left-0 right-0 z-[60] flex justify-center px-6 pointer-events-none">
+      <div className="bg-slate-900/90 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-lg backdrop-blur-sm animate-toast-in">
+        {message}
+      </div>
+    </div>
+  );
+};

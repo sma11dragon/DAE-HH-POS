@@ -4,15 +4,17 @@ import { ActionFooter } from '../components/ActionFooter';
 import { RefreshCw, ArrowLeft, QrCode, Layers, CreditCard, Banknote, ChevronRight } from 'lucide-react';
 import { theme } from '../theme';
 import { Button, Card, ModalOverlay } from '../components/UI';
+import { getFuelColor } from '../config/fuelProducts';
 
 interface PumpDetailProps {
   pumpId: number;
   onBack: () => void;
+  showToast?: (msg: string) => void;
 }
 
 type ViewState = 'MAIN' | 'SETTLEMENT';
 
-export const PumpDetail: React.FC<PumpDetailProps> = ({ pumpId, onBack }) => {
+export const PumpDetail: React.FC<PumpDetailProps> = ({ pumpId, onBack, showToast }) => {
   const [selectedNozzle, setSelectedNozzle] = useState<number | null>(null);
   const [transactionState, setTransactionState] = useState<'IDLE' | 'FUELING' | 'COMPLETED'>('IDLE');
   const [volume, setVolume] = useState(0);
@@ -56,20 +58,13 @@ export const PumpDetail: React.FC<PumpDetailProps> = ({ pumpId, onBack }) => {
   }
 
   const nozzleData = [
-      { id: 1, name: 'EA95', price: 1.12 },
-      { id: 2, name: 'EA92', price: 0.97 },
-      { id: 3, name: 'DO', price: 0.93 },
+      { id: 1, name: 'Revvo 90',           price: 0.88 },
+      { id: 2, name: 'Revvo 92',           price: 0.97 },
+      { id: 3, name: 'Revvo 95',           price: 1.12 },
+      { id: 4, name: 'Primus Diesel Plus', price: 0.93 },
   ];
 
-  const getNozzleStyle = (id: number) => {
-      // Base Product Colors
-      switch(id) {
-          case 1: return { text: 'text-amber-500', bg: 'bg-amber-500' };
-          case 2: return { text: 'text-blue-700', bg: 'bg-blue-700' };
-          case 3: return { text: 'text-red-700', bg: 'bg-red-700' };
-          default: return { text: 'text-slate-800', bg: 'bg-slate-800' };
-      }
-  };
+  const getNozzleColor = (name: string): string => getFuelColor(name);
 
   const currentNozzle = nozzleData.find(n => n.id === selectedNozzle);
   const totalAmount = currentNozzle ? (volume * currentNozzle.price).toFixed(2) : '0.00';
@@ -106,7 +101,7 @@ export const PumpDetail: React.FC<PumpDetailProps> = ({ pumpId, onBack }) => {
               <ArrowLeft size={20} />
           </button>
           
-          <span className="text-lg font-bold text-slate-800">Pump {pumpId}</span>
+          <span className="text-lg font-bold" style={{ color: '#3271ae' }}>Pump {pumpId}</span>
           
           <button 
             className="text-slate-500 hover:bg-slate-50 p-1 -mr-2 rounded-full transition-colors flex items-center justify-center" 
@@ -125,13 +120,11 @@ export const PumpDetail: React.FC<PumpDetailProps> = ({ pumpId, onBack }) => {
         
         {viewState === 'MAIN' && (
              <div className="mb-6 shrink-0 w-full space-y-3">
-                 <h3 className="text-sm font-bold text-slate-900 mb-3 px-1">Select Fuel Point</h3>
+                 <h3 className="text-sm font-bold px-1 mb-3" style={{ color: '#3271ae' }}>Select Fuel Point</h3>
                 {nozzleData.map((nozzle) => {
                     const isSelected = selectedNozzle === nozzle.id;
-                    const { text: productText, bg: productBg } = getNozzleStyle(nozzle.id);
-                    
-                    // Override nozzle ID color if selected to match Brand Yellow
-                    const idColor = isSelected ? 'text-[#FFC107]' : productText;
+                    const productColor = getNozzleColor(nozzle.name);
+                    const idColor = isSelected ? '#FFC107' : productColor;
                     
                     return (
                         <button 
@@ -145,7 +138,7 @@ export const PumpDetail: React.FC<PumpDetailProps> = ({ pumpId, onBack }) => {
                             <div className="flex items-center px-5 py-4">
                                 {/* Numbers - Size matched to Home screen pump buttons */}
                                 <div className="flex items-baseline mr-6 min-w-[3rem]">
-                                    <span className={`text-2xl font-bold leading-none ${idColor}`}>{nozzle.id}</span>
+                                    <span className="text-2xl font-bold leading-none" style={{ color: idColor }}>{nozzle.id}</span>
                                 </div>
 
                                 {/* Info */}
@@ -161,7 +154,7 @@ export const PumpDetail: React.FC<PumpDetailProps> = ({ pumpId, onBack }) => {
                             </div>
 
                             {/* Bottom Color Strip - Use Yellow if selected, else product color */}
-                            <div className={`h-1.5 w-full ${isSelected ? 'bg-[#FFC107]' : productBg}`}></div>
+                            <div className="h-1.5 w-full" style={{ backgroundColor: isSelected ? '#FFC107' : productColor }} />
                         </button>
                     );
                 })}
@@ -195,27 +188,27 @@ export const PumpDetail: React.FC<PumpDetailProps> = ({ pumpId, onBack }) => {
                       </div>
                   </div>
 
-                  {/* Confirm Button - Uses Primary Blue */}
-                  <Button variant="primary" className="py-3 mb-4 font-bold shadow-sm" fullWidth>
+                  {/* Confirm Button - DAE brand blue */}
+                  <Button variant="primary" className="py-3 mb-4 font-bold shadow-sm" style={{ backgroundColor: '#3271ae' }} fullWidth onClick={() => setShowPaymentSuccess(true)}>
                     Confirm
                   </Button>
 
                   {/* Payment Methods - All Neutral Outlines */}
                   <div className="grid grid-cols-2 gap-2 mt-auto pb-4 w-full">
                        <Button variant="outline" className="flex-col gap-1 py-3 h-auto" onClick={() => setShowPaymentSuccess(true)}>
-                           <Banknote size={20} className="text-slate-600" /> 
+                           <Banknote size={20} className="text-slate-600" />
                            <span className="text-[10px]">Cash</span>
                        </Button>
                        <Button variant="outline" className="flex-col gap-1 py-3 h-auto" onClick={() => setShowPaymentSuccess(true)}>
-                           <QrCode size={20} className="text-slate-600" /> 
+                           <QrCode size={20} className="text-slate-600" />
                            <span className="text-[10px]">QR</span>
                        </Button>
-                       <Button variant="outline" className="flex-col gap-1 py-3 h-auto">
-                           <CreditCard size={20} className="text-slate-600" /> 
+                       <Button variant="outline" className="flex-col gap-1 py-3 h-auto" onClick={() => setShowPaymentSuccess(true)}>
+                           <CreditCard size={20} className="text-slate-600" />
                            <span className="text-[10px]">Card</span>
                        </Button>
-                       <Button variant="outline" className="flex-col gap-1 py-3 h-auto">
-                           <Layers size={20} className="text-slate-600" /> 
+                       <Button variant="outline" className="flex-col gap-1 py-3 h-auto" onClick={() => showToast?.('Other payments: coming soon')}>
+                           <Layers size={20} className="text-slate-600" />
                            <span className="text-[10px]">Other</span>
                        </Button>
                   </div>

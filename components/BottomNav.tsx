@@ -1,6 +1,7 @@
 import React from 'react';
-import { Home, FileText, Tag, LogOut } from 'lucide-react';
+import { FileText, Tag, Settings } from 'lucide-react';
 import { Screen } from '../types';
+import { DAEIconMark } from './DAELogo';
 
 interface BottomNavProps {
   currentScreen: Screen;
@@ -8,39 +9,58 @@ interface BottomNavProps {
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({ currentScreen, onNavigate }) => {
-  // Navigation styling logic
-  const navItemClass = (active: boolean) => 
-    `flex flex-col items-center justify-center py-2 px-1 flex-1 transition-colors ${
-        active 
-        ? 'bg-[#FFC107] text-[#466E9B] rounded-t-md' 
-        : 'text-white/70 hover:text-white'
+  const isHome = currentScreen === Screen.HOME || currentScreen === Screen.PUMP_DETAIL;
+
+  const itemClass = (active: boolean) =>
+    `flex flex-col items-center justify-center py-2 px-1 flex-1 transition-all duration-150 ${
+      active ? 'text-[#FFC107]' : 'text-white/60 hover:text-white/90'
     }`;
-  
-  // Icon Size helper
-  const iconSize = 24;
 
   return (
-    <div className="bg-[#466E9B] border-t border-[#36587d] flex justify-between items-stretch shrink-0 px-0 shadow-[0_-2px_10px_rgba(0,0,0,0.1)] pt-1">
-      
-      <button onClick={() => onNavigate(Screen.HOME)} className={navItemClass(currentScreen === Screen.HOME || currentScreen === Screen.PUMP_DETAIL)}>
-        <Home size={iconSize} strokeWidth={currentScreen === Screen.HOME ? 2.5 : 2} />
-        <span className="text-[10px] font-bold mt-1">Home</span>
+    <div className="bg-[#3271ae] border-t border-[#245d9a] flex items-stretch shrink-0 shadow-[0_-2px_12px_rgba(0,0,0,0.15)]">
+
+      {/* History */}
+      <button
+        onClick={() => onNavigate(Screen.HISTORY)}
+        className={itemClass(currentScreen === Screen.HISTORY)}
+      >
+        <FileText size={20} strokeWidth={currentScreen === Screen.HISTORY ? 2.5 : 1.8} />
+        <span className="text-[10px] font-medium mt-0.5">History</span>
       </button>
 
-      <button onClick={() => onNavigate(Screen.HISTORY)} className={navItemClass(currentScreen === Screen.HISTORY)}>
-        <FileText size={iconSize} strokeWidth={currentScreen === Screen.HISTORY ? 2.5 : 2} />
-        <span className="text-[10px] font-medium mt-1">History</span>
+      {/* Prices */}
+      <button
+        onClick={() => onNavigate(Screen.PRICE_CHECK)}
+        className={itemClass(currentScreen === Screen.PRICE_CHECK)}
+      >
+        <Tag size={20} strokeWidth={currentScreen === Screen.PRICE_CHECK ? 2.5 : 1.8} />
+        <span className="text-[10px] font-medium mt-0.5">Prices</span>
       </button>
 
-      <button onClick={() => onNavigate(Screen.PRICE_CHECK)} className={navItemClass(currentScreen === Screen.PRICE_CHECK)}>
-        <Tag size={iconSize} strokeWidth={currentScreen === Screen.PRICE_CHECK ? 2.5 : 2} />
-        <span className="text-[10px] font-medium mt-1">Prices</span>
+      {/* Home — center, DAE icon mark, elevated */}
+      <button
+        onClick={() => onNavigate(Screen.HOME)}
+        className="flex flex-col items-center justify-center py-1 px-3 relative"
+      >
+        <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all duration-150 active:scale-95 ${
+          isHome
+            ? 'bg-[#FFC107] shadow-[#FFC107]/40'
+            : 'bg-white/15 hover:bg-white/20'
+        }`}>
+          <DAEIconMark size={22} color={isHome ? '#3271ae' : 'white'} />
+        </div>
+        <span className={`text-[10px] font-bold mt-0.5 ${isHome ? 'text-[#FFC107]' : 'text-white/60'}`}>Home</span>
       </button>
 
-      <button onClick={() => onNavigate(Screen.EOS)} className={navItemClass(currentScreen === Screen.EOS)}>
-        <LogOut size={iconSize} strokeWidth={currentScreen === Screen.EOS ? 2.5 : 2} />
-        <span className="text-[10px] font-medium mt-1">Sign Out</span>
+      {/* Settings */}
+      <button
+        onClick={() => onNavigate(Screen.SETTINGS)}
+        className={itemClass(currentScreen === Screen.SETTINGS)}
+      >
+        <Settings size={20} strokeWidth={currentScreen === Screen.SETTINGS ? 2.5 : 1.8} />
+        <span className="text-[10px] font-medium mt-0.5">Settings</span>
       </button>
+
     </div>
   );
 };

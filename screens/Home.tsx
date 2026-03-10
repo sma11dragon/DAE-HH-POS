@@ -1,270 +1,665 @@
 import React, { useState } from 'react';
-import { Screen, Transaction } from '../types';
+import { Screen, NozzleStatus, Nozzle } from '../types';
 import { Header } from '../components/TopBar';
-import { theme } from '../theme';
-import { Button, Card } from '../components/UI';
-import { 
-  Zap, 
-  CreditCard, 
-  Ticket, 
-  ShoppingBag, 
-  Fuel, 
-  AlertTriangle, 
-  Clock, 
-  CheckCircle2,
-  XCircle,
-  Droplets,
-  Ban,
-  ChevronRight,
-  Tag
+import {
+  MapPin, User, Banknote, Info, X,
+  Zap, AlertTriangle, PauseCircle,
+  QrCode, CreditCard, Truck, Tag, Calendar, Gift,
 } from 'lucide-react';
+import { useAppContext } from '../AppContext';
+import { getFuelName, getFuelColor } from '../config/fuelProducts';
+import { MOCK_CASHIER_SUMMARY } from '../mockData';
 
 interface HomeScreenProps {
   onNavigate: (screen: Screen) => void;
-  onSelectTransaction: (transaction: Transaction) => void;
+  onSelectTransaction: (transaction: import('../types').Transaction) => void;
+  showToast?: (msg: string) => void;
 }
 
-type NozzleStatus = 'Idle' | 'Fueling' | 'Payment' | 'Error' | 'Offline' | 'Suspended';
+const STATUS_COLORS: Record<NozzleStatus, string> = {
+  Idle:      '#466E9B',
+  Fueling:   '#22C55E',
+  Payment:   '#F59E0B',
+  Error:     '#EF4444',
+  Offline:   '#94A3B8',
+  Suspended: '#F97316',
+};
 
-interface Nozzle {
-  id: number;
-  number: number;
-  product: string;
-  volume: string;
-  amount: string;
-  status: NozzleStatus;
+const STATUS_LEGEND: { status: NozzleStatus; label: string; desc: string }[] = [
+  { status: 'Idle',      label: 'Idle',      desc: 'Ready, no activity' },
+  { status: 'Fueling',   label: 'Fueling',   desc: 'Dispensing in progress' },
+  { status: 'Payment',   label: 'Payment',   desc: 'Awaiting cashier action' },
+  { status: 'Suspended', label: 'Suspended', desc: 'Manually paused' },
+  { status: 'Error',     label: 'Error',     desc: 'Fault — attention needed' },
+  { status: 'Offline',   label: 'Offline',   desc: 'No comms / disconnected' },
+];
+
+interface Promotion {
+  date: string;
+  title: string;
+  offer: string;
+  tag: string;
 }
 
-interface Pump {
-  id: number;
-  nozzles: Nozzle[];
+const PROMOTIONS: Promotion[] = [
+  {
+    date: '14 Feb 2026',
+    title: 'Grand Launch — Tela Khmer Bati',
+    offer: '50% discount coupon from Luna Coffee or Kimmo Spicy Noodles',
+    tag: 'Opening',
+  },
+  {
+    date: '7 Feb 2026',
+    title: 'Tela Khmer Pich Nil is Open!',
+    offer: '50% discount coupon from Luna Coffee or Kimmo Spicy Noodles',
+    tag: 'Opening',
+  },
+  {
+    date: '6 Feb 2026',
+    title: 'Promotion — Tela Khmer Russey Keo',
+    offer: 'Exclusive promotional offer for station customers',
+    tag: 'Offer',
+  },
+  {
+    date: '28 Jan 2026',
+    title: 'Opening — Tela Khmer Kampong Cham',
+    offer: 'Fuel purchase 10,000–159,900 ៛ = 1 free water bottle + 1 game coupon',
+    tag: 'Opening',
+  },
+  {
+    date: '23 Jan 2026',
+    title: 'Opening — Tela Khmer Ang Snuol',
+    offer: 'Fuel purchase 10,000–159,900 ៛ = 1 free water bottle + 1 game coupon',
+    tag: 'Opening',
+  },
+  {
+    date: '19 Jan 2026',
+    title: 'Free Tela Khmer Bottle!',
+    offer: 'Get a free Tela Khmer branded bottle at Russey Keo station',
+    tag: 'Gift',
+  },
+];
+
+const MOP_ICONS: Record<string, React.ReactNode> = {
+  'Cash':       <Banknote  size={14} />,
+  'QR Code':    <QrCode    size={14} />,
+  'Bank Card':  <CreditCard size={14} />,
+  'Fleet Card': <Truck     size={14} />,
+};
+
+function groupByPump(nozzles: Nozzle[]): { pumpId: number; nozzles: Nozzle[] }[] {
+  const map = new Map<number, Nozzle[]>();
+  for (const nozzle of nozzles) {
+    const pumpId = Math.floor(nozzle.id / 100);
+    if (!map.has(pumpId)) map.set(pumpId, []);
+    map.get(pumpId)!.push(nozzle);
+  }
+  return Array.from(map.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([pumpId, nozzles]) => ({ pumpId, nozzles }));
 }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate, onSelectTransaction }) => {
-  const [autoCashEnabled, setAutoCashEnabled] = useState(false);
+export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate, onSelectTransaction, showToast }) => {
+  const { nozzles, setNozzles, pendingTransactions } = useAppContext();
 
-  // Mock Data for 3 Pumps, 6 Nozzles each
-  const pumps: Pump[] = [
-    {
-      id: 1,
-      nozzles: [
-        { id: 101, number: 1, product: '92', volume: '0.00L', amount: '$0.00', status: 'Idle' },
-        { id: 102, number: 2, product: '95', volume: '12.50L', amount: '$28.50', status: 'Fueling' },
-        { id: 103, number: 3, product: '98', volume: '0.00L', amount: '$0.00', status: 'Idle' },
-        { id: 104, number: 4, product: 'Diesel', volume: '45.20L', amount: '$68.90', status: 'Payment' },
-        { id: 105, number: 5, product: 'AdBlue', volume: '0.00L', amount: '$0.00', status: 'Idle' },
-        { id: 106, number: 6, product: 'Prem', volume: '0.00L', amount: '$0.00', status: 'Offline' },
-      ]
-    },
-    {
-      id: 2,
-      nozzles: [
-        { id: 201, number: 1, product: '92', volume: '0.00L', amount: '$0.00', status: 'Idle' },
-        { id: 202, number: 2, product: '95', volume: '0.00L', amount: '$0.00', status: 'Idle' },
-        { id: 203, number: 3, product: '98', volume: '5.20L', amount: '$12.40', status: 'Payment' },
-        { id: 204, number: 4, product: 'Diesel', volume: '0.00L', amount: '$0.00', status: 'Error' },
-        { id: 205, number: 5, product: 'AdBlue', volume: '0.00L', amount: '$0.00', status: 'Idle' },
-        { id: 206, number: 6, product: 'Prem', volume: '0.00L', amount: '$0.00', status: 'Idle' },
-      ]
-    },
-    {
-      id: 3,
-      nozzles: [
-        { id: 301, number: 1, product: '92', volume: '0.00L', amount: '$0.00', status: 'Idle' },
-        { id: 302, number: 2, product: '95', volume: '0.00L', amount: '$0.00', status: 'Idle' },
-        { id: 303, number: 3, product: '98', volume: '0.00L', amount: '$0.00', status: 'Idle' },
-        { id: 304, number: 4, product: 'Diesel', volume: '0.00L', amount: '$0.00', status: 'Idle' },
-        { id: 305, number: 5, product: 'AdBlue', volume: '0.00L', amount: '$0.00', status: 'Idle' },
-        { id: 306, number: 6, product: 'Prem', volume: '0.00L', amount: '$0.00', status: 'Idle' },
-      ]
-    }
-  ];
+  const [autoSettleEnabled, setAutoSettleEnabled]   = useState(false);
+  const [legendOpen, setLegendOpen]                 = useState(false);
+  const [drawerNozzle, setDrawerNozzle]             = useState<Nozzle | null>(null);
+  const [tooltipField, setTooltipField]             = useState<'volume' | 'amount' | null>(null);
+  const [cashierDrawerOpen, setCashierDrawerOpen]   = useState(false);
+  const [siteDrawerOpen, setSiteDrawerOpen]         = useState(false);
 
-  // Mock Pending Transactions derived from "Payment" status nozzles
-  const pendingTransactions: Transaction[] = [
-    { id: 'TXN-104', time: '10:42 AM', type: 'Fuel', staff: 'Admin', amount: '$68.90', status: 'Pending', product: 'Diesel', nozzleNumber: 4, volume: '45.20L' },
-    { id: 'TXN-203', time: '10:45 AM', type: 'Fuel', staff: 'Admin', amount: '$12.40', status: 'Pending', product: '98', nozzleNumber: 3, volume: '5.20L' },
-  ];
+  const closeDrawer = () => { setDrawerNozzle(null); setTooltipField(null); };
+  const toggleTooltip = (field: 'volume' | 'amount') =>
+    setTooltipField(prev => prev === field ? null : field);
+  const showsDailyTotals = (status: NozzleStatus) =>
+    status !== 'Fueling' && status !== 'Payment';
 
-  const getStatusStyles = (status: NozzleStatus) => {
-    switch (status) {
-      case 'Idle': return { border: 'border-emerald-500', bg: 'bg-emerald-50/30', text: 'text-emerald-700', badge: 'bg-emerald-100 text-emerald-800' };
-      case 'Fueling': return { border: 'border-yellow-400', bg: 'bg-yellow-50/30', text: 'text-yellow-800', badge: 'bg-yellow-100 text-yellow-800' };
-      case 'Payment': return { border: 'border-rose-500', bg: 'bg-rose-50/30', text: 'text-rose-700', badge: 'bg-rose-100 text-rose-800' };
-      case 'Error': return { border: 'border-red-600', bg: 'bg-red-50/30', text: 'text-red-800', badge: 'bg-red-100 text-red-800' };
-      case 'Offline': return { border: 'border-slate-400', bg: 'bg-slate-50/30', text: 'text-slate-600', badge: 'bg-slate-200 text-slate-700' };
-      case 'Suspended': return { border: 'border-orange-500', bg: 'bg-orange-50/30', text: 'text-orange-800', badge: 'bg-orange-100 text-orange-800' };
-      default: return { border: 'border-slate-300', bg: 'bg-slate-50', text: 'text-slate-600', badge: 'bg-slate-100 text-slate-600' };
+  const pumpGroups = groupByPump(nozzles);
+
+  const handleNozzleTap = (nozzle: Nozzle) => {
+    if (nozzle.status === 'Payment') {
+      const nozzleNum = nozzle.id % 100;
+      const txn = pendingTransactions.find(t => t.nozzleNumber === nozzleNum);
+      if (txn) onSelectTransaction(txn);
+    } else if (nozzle.status !== 'Offline') {
+      setDrawerNozzle(nozzle);
     }
   };
 
-  const getStatusIcon = (status: NozzleStatus) => {
-    switch (status) {
-      case 'Idle': return <CheckCircle2 size={12} />;
-      case 'Fueling': return <Droplets size={12} className="animate-bounce" />;
-      case 'Payment': return <CreditCard size={12} />;
-      case 'Error': return <AlertTriangle size={12} />;
-      case 'Offline': return <Ban size={12} />;
-      case 'Suspended': return <XCircle size={12} />;
-      default: return <Fuel size={12} />;
-    }
+  const handleAutoCashToggle = () => {
+    const next = !autoSettleEnabled;
+    setAutoSettleEnabled(next);
+    showToast?.(next ? 'Auto Cash enabled' : 'Auto Cash off');
   };
+
+  const updateNozzleStatus = (nozzle: Nozzle, status: NozzleStatus) => {
+    setNozzles(prev => prev.map(n => n.id === nozzle.id ? { ...n, status } : n));
+  };
+
+  const tileAnimClass = (status: NozzleStatus): string => {
+    if (status === 'Fueling') return 'animate-pulse';
+    if (status === 'Error')   return 'animate-error-glow';
+    return '';
+  };
+
+  const tappable = (status: NozzleStatus) => status !== 'Offline';
+
+  const summary = MOCK_CASHIER_SUMMARY;
 
   return (
-    <div className={theme.layout.screen}>
+    <div className="flex flex-col flex-1 overflow-hidden bg-slate-50">
       <Header />
-      
-      <div className={`flex-1 overflow-y-auto ${theme.layout.screenPadding} pb-24`}>
-        
-        {/* Pumps Grid */}
-        <div className="flex flex-col gap-6 mb-6">
-          {pumps.map((pump) => (
-            <div key={pump.id} className="flex flex-col">
-              {/* Pump Header */}
-              <div className="flex items-center gap-2 mb-2 px-1">
-                <div className="bg-slate-800 text-white text-xs font-bold px-2 py-1 rounded">
-                  PUMP {pump.id}
-                </div>
-                <div className="h-px bg-slate-200 flex-1"></div>
-              </div>
 
-              {/* Nozzles Grid - 3 columns, no gap */}
-              <div className="grid grid-cols-3 gap-1 w-full">
-                {pump.nozzles.map((nozzle) => {
-                  const styles = getStatusStyles(nozzle.status);
-                  return (
-                    <div 
-                      key={nozzle.id} 
-                      className={`relative p-2 flex flex-col justify-between h-28 border-2 ${styles.border} ${styles.bg} transition-all`}
-                    >
-                      {/* Top: Nozzle # */}
-                      <div className="flex justify-between items-start mb-1">
-                        <span className="text-[10px] font-bold bg-white/80 px-1.5 rounded border border-slate-100 shadow-sm text-slate-700">
-                          #{nozzle.number}
-                        </span>
-                      </div>
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-6 pt-3 flex flex-col gap-3">
 
-                      {/* Status Row (Below Number) */}
-                      <div className={`flex items-center gap-1 mb-1 px-1 py-0.5 rounded w-fit ${styles.badge}`}>
-                        {getStatusIcon(nozzle.status)}
-                        <span className="text-[8px] font-bold uppercase tracking-wider">
-                          {nozzle.status}
-                        </span>
-                      </div>
-                      
-                      {/* Middle: Product Name */}
-                      <div className="flex-1 flex items-center mt-1">
-                        <span className={`text-sm font-black tracking-tight ${styles.text} leading-none`}>
-                          {nozzle.product}
-                        </span>
-                      </div>
-
-                      {/* Bottom: Volume and Amount */}
-                      <div className="flex flex-col items-start mt-1">
-                        <div className="text-[10px] text-slate-500 font-mono leading-tight">
-                          {nozzle.volume}
-                        </div>
-                        <div className="text-xs font-bold text-slate-900 leading-tight">
-                          {nozzle.amount}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+        {/* Site & Cashier Info */}
+        <div className="flex gap-2 min-w-0">
+          {/* Site tile — tappable → promotions drawer */}
+          <div
+            className="flex-1 min-w-0 rounded-xl border border-slate-200 bg-white px-2.5 py-2 flex items-center gap-1.5 cursor-pointer active:scale-[0.98] transition-transform active:bg-slate-50"
+            onClick={() => setSiteDrawerOpen(true)}
+          >
+            <div className="w-6 h-6 rounded-lg bg-[#3271ae]/10 flex items-center justify-center shrink-0">
+              <MapPin size={12} className="text-[#3271ae]" />
             </div>
-          ))}
+            <div className="flex flex-col min-w-0 flex-1">
+              <span className="text-[10px] text-slate-400 font-medium leading-none mb-0.5">Site</span>
+              <span className="text-xs font-bold text-slate-800 truncate">Tela New Town</span>
+            </div>
+            <div className="w-1.5 h-1.5 rounded-full bg-[#3271ae]/30 shrink-0" />
+          </div>
+
+          {/* Cashier tile — tappable → shift summary drawer */}
+          <div
+            className="flex-1 min-w-0 rounded-xl border border-slate-200 bg-white px-2.5 py-2 flex items-center gap-1.5 cursor-pointer active:scale-[0.98] transition-transform active:bg-slate-50"
+            onClick={() => setCashierDrawerOpen(true)}
+          >
+            <div className="w-6 h-6 rounded-lg bg-[#3271ae]/10 flex items-center justify-center shrink-0">
+              <User size={12} className="text-[#3271ae]" />
+            </div>
+            <div className="flex flex-col min-w-0 flex-1">
+              <span className="text-[10px] text-slate-400 font-medium leading-none mb-0.5">Cashier</span>
+              <span className="text-xs font-bold text-slate-800 truncate">Dara Chan</span>
+            </div>
+            <div className="w-1.5 h-1.5 rounded-full bg-[#3271ae]/30 shrink-0" />
+          </div>
         </div>
 
-        {/* Action Buttons - Archive Style + Fast Key */}
-        <div className="flex flex-col gap-3 mb-6">
-            {/* Row 1: Coupon & Payment */}
-            <div className="flex gap-3">
-                <Button variant="outline" className="flex-1 bg-white shadow-sm" icon={<Tag size={16} />}>
-                    Coupon
-                </Button>
-                <Button variant="outline" className="flex-1 bg-white shadow-sm" icon={<CreditCard size={16} />}>
-                    Payment
-                </Button>
+        {/* Nozzle Section */}
+        <div>
+          {/* Header row — Legend + Auto Cash together */}
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">Nozzles</span>
+            <div className="flex items-center gap-1.5">
+              {/* Auto Cash — compact, inline */}
+              <button
+                onClick={handleAutoCashToggle}
+                className={`h-7 px-2.5 rounded-lg text-[10px] font-semibold flex items-center gap-1 border transition-all active:scale-95 ${
+                  autoSettleEnabled
+                    ? 'bg-emerald-600 border-emerald-600 text-white'
+                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                }`}
+              >
+                <Banknote size={11} strokeWidth={2} className={autoSettleEnabled ? 'text-white' : 'text-emerald-600'} />
+                <span className="whitespace-nowrap">{autoSettleEnabled ? 'Settling' : 'Auto Cash'}</span>
+              </button>
+
+              {/* Legend toggle */}
+              <button
+                onClick={() => setLegendOpen(o => !o)}
+                className={`h-7 px-2.5 rounded-lg text-[10px] font-semibold flex items-center gap-1 border transition-all active:scale-95 ${
+                  legendOpen
+                    ? 'bg-[#3271ae]/10 border-[#3271ae]/20 text-[#3271ae]'
+                    : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+                }`}
+              >
+                <Info size={11} />
+                Legend
+              </button>
             </div>
+          </div>
 
-            {/* Row 2: Fast Key */}
-            <Button 
-                variant="primary" 
-                className="w-full shadow-sm" 
-                icon={<ShoppingBag size={16} />}
-                onClick={() => onNavigate(Screen.FAST_KEY)}
-            >
-                Fast Key
-            </Button>
 
-            {/* Row 3: Auto-Cash Mode Toggle */}
-            <Card 
-                className="p-3 flex justify-between items-center bg-white border-slate-200 shadow-sm"
-                onClick={() => setAutoCashEnabled(!autoCashEnabled)}
-            >
-                <div className="flex items-center gap-2">
-                    <div className="p-1 bg-slate-50 border border-slate-100 rounded text-slate-600">
-                        <Zap size={14} fill="currentColor" />
-                    </div>
-                    <span className="text-slate-700 font-semibold text-xs">Auto-Cash Mode</span>
+          {/* Pump groups */}
+          <div className="flex flex-col gap-3">
+            {pumpGroups.map(({ pumpId, nozzles: pumpNozzles }) => (
+              <div key={pumpId}>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pump {pumpId}</span>
+                  <div className="flex-1 h-px bg-slate-200" />
                 </div>
-                
-                {/* Toggle Switch */}
-                <div className={`relative inline-flex h-5 w-9 items-center rounded-full cursor-pointer transition-colors ${autoCashEnabled ? 'bg-[#466E9B]' : 'bg-slate-200'}`}>
-                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition shadow-sm ${autoCashEnabled ? 'translate-x-4' : 'translate-x-1'}`} />
+                <div className="grid grid-cols-6 gap-1.5">
+                  {pumpNozzles.map((nozzle) => {
+                    const nozzleNum = nozzle.id % 100;
+                    const label     = String(nozzleNum).padStart(2, '0');
+                    const color     = STATUS_COLORS[nozzle.status];
+                    const isTappable = tappable(nozzle.status);
+                    return (
+                      <div
+                        key={nozzle.id}
+                        className={`h-16 rounded-xl flex flex-col items-center justify-center select-none transition-all duration-100 ${
+                          isTappable ? 'active:scale-95 cursor-pointer' : 'cursor-default opacity-60'
+                        } ${tileAnimClass(nozzle.status)}`}
+                        style={{ backgroundColor: color }}
+                        onClick={() => handleNozzleTap(nozzle)}
+                      >
+                        <span className="text-sm font-black text-white leading-none">{label}</span>
+                        <span className="text-[10px] text-white/80 mt-0.5 leading-none">{nozzle.product}</span>
+                      </div>
+                    );
+                  })}
                 </div>
-            </Card>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Pending Transactions */}
+        {/* Pending Transactions — directly below nozzles, no Payment CTA */}
         {pendingTransactions.length > 0 && (
-          <div className="animate-fade-in">
-            <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-              <Clock size={16} className="text-amber-500" />
-              Pending Transactions
-            </h3>
-            <div className="flex flex-col gap-3">
-              {pendingTransactions.map((txn) => (
-                <Card 
-                  key={txn.id} 
-                  className="p-0 flex flex-row items-stretch overflow-hidden group hover:border-amber-300 transition-all border border-slate-200 shadow-sm"
-                  onClick={() => onSelectTransaction(txn)}
-                >
-                   <div className="w-1.5 bg-amber-500 h-full shrink-0"></div>
-                   <div className="flex-1 p-3 flex justify-between items-center">
-                      <div className="flex flex-col gap-0.5 w-full">
-                        {/* Row 1: Pump + Nozzle + Time */}
-                        <div className="flex items-center justify-between text-xs text-slate-500 w-full">
-                            <span className="font-bold text-slate-700">
-                                Pump {txn.id.split('-')[1].charAt(0)} #{txn.nozzleNumber}
-                            </span>
-                            <span>{txn.time}</span>
-                        </div>
-
-                        {/* Row 2: Price + Product */}
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="font-bold text-slate-900 text-lg">{txn.amount}</span>
-                          <span className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium">{txn.product}</span>
-                        </div>
-
-                        {/* Row 3: Volume */}
-                        <div className="text-xs text-slate-500 font-mono">
-                            {txn.volume}
-                        </div>
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">
+                Unpaid ({pendingTransactions.length})
+              </span>
+              <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {pendingTransactions.map((txn) => {
+                const srcNozzle = nozzles.find(n => n.id % 100 === txn.nozzleNumber && n.status === 'Payment');
+                const pumpNum = srcNozzle ? Math.floor(srcNozzle.id / 100) : null;
+                return (
+                  <div
+                    key={txn.id}
+                    className="rounded-xl border border-amber-200 bg-white overflow-hidden active:scale-[0.98] transition-transform cursor-pointer shadow-sm"
+                    onClick={() => onSelectTransaction(txn)}
+                  >
+                    <div className="h-1 bg-amber-400" />
+                    <div className="p-1.5">
+                      <div className="text-[10px] text-slate-400 font-medium leading-tight">
+                        {pumpNum ? `P${pumpNum} · ` : ''}N{txn.nozzleNumber}
                       </div>
-                      <div className="bg-slate-50 p-2 rounded-full text-slate-400 group-hover:bg-slate-100 transition-colors ml-3 shrink-0">
-                          <ChevronRight size={18} />
+                      <div className="text-[10px] font-bold text-slate-700 leading-tight truncate">{txn.product}</div>
+                      <div className="text-[10px] text-slate-400 font-mono leading-tight">{txn.volume}</div>
+                      <div className="mt-1 pt-1 border-t border-slate-100">
+                        <div className="text-xs font-black text-amber-600">{txn.amount}</div>
                       </div>
-                   </div>
-                </Card>
-              ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
       </div>
+
+      {/* ── Site promotions drawer ── */}
+      {siteDrawerOpen && (
+        <>
+          <div
+            className="absolute inset-0 z-40 bg-slate-900/30 animate-fade-in"
+            onClick={() => setSiteDrawerOpen(false)}
+          />
+          <div className="absolute bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl animate-slide-up flex flex-col max-h-[80vh]">
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-1 shrink-0">
+              <div className="w-8 h-1 rounded-full bg-slate-200" />
+            </div>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#3271ae]/10 flex items-center justify-center">
+                  <Tag size={18} className="text-[#3271ae]" />
+                </div>
+                <div>
+                  <div className="font-bold text-slate-900 text-base">Current Promotions</div>
+                  <div className="text-xs text-slate-400">Tela New Town · {PROMOTIONS.length} active offers</div>
+                </div>
+              </div>
+              <button
+                onClick={() => setSiteDrawerOpen(false)}
+                className="p-2 rounded-full text-slate-400 hover:bg-slate-50 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Scrollable promo list */}
+            <div className="overflow-y-auto px-4 pb-8 flex flex-col gap-3">
+              {PROMOTIONS.map((promo, i) => (
+                <div key={i} className="rounded-xl border border-slate-100 bg-white shadow-sm">
+                  {/* Color accent strip */}
+                  <div className="h-1 bg-[#3271ae] rounded-t-xl" />
+                  <div className="px-3.5 pt-3 pb-3.5 flex flex-col gap-2">
+                    {/* Tag + date row */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        promo.tag === 'Opening'
+                          ? 'bg-[#3271ae]/10 text-[#3271ae]'
+                          : promo.tag === 'Gift'
+                          ? 'bg-emerald-50 text-emerald-600'
+                          : 'bg-amber-50 text-amber-600'
+                      }`}>
+                        {promo.tag}
+                      </span>
+                      <div className="flex items-center gap-1 text-[10px] text-slate-400 font-medium">
+                        <Calendar size={10} />
+                        {promo.date}
+                      </div>
+                    </div>
+
+                    {/* Title */}
+                    <div className="text-sm font-bold text-slate-800 leading-snug">{promo.title}</div>
+
+                    {/* Offer detail */}
+                    <div className="flex items-start gap-2">
+                      <Gift size={12} className="text-slate-400 shrink-0 mt-0.5" />
+                      <span className="text-xs text-slate-500 leading-relaxed">{promo.offer}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Legend modal ── */}
+      {legendOpen && (
+        <>
+          <div
+            className="absolute inset-0 z-40 bg-black/40 backdrop-blur-sm animate-fade-in"
+            onClick={() => setLegendOpen(false)}
+          />
+          <div className="absolute inset-0 z-50 flex items-center justify-center px-5 pointer-events-none">
+            <div className="w-full bg-white rounded-2xl shadow-2xl overflow-hidden pointer-events-auto animate-scale-in">
+              {/* Modal header */}
+              <div className="bg-[#3271ae] px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Info size={14} color="white" />
+                  <span className="text-sm font-bold text-white">Nozzle Status</span>
+                </div>
+                <button
+                  onClick={() => setLegendOpen(false)}
+                  className="p-1.5 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              {/* 2-col status grid */}
+              <div className="p-4 grid grid-cols-2 gap-2">
+                {STATUS_LEGEND.map((item) => (
+                  <div key={item.status} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-slate-50">
+                    <div
+                      className="w-3 h-3 rounded-full shrink-0 mt-0.5"
+                      style={{ backgroundColor: STATUS_COLORS[item.status] }}
+                    />
+                    <div>
+                      <div className="text-xs font-bold text-slate-700">{item.label}</div>
+                      <div className="text-[10px] text-slate-400 leading-tight">{item.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Nozzle detail drawer ── */}
+      {drawerNozzle && (
+        <>
+          <div className="absolute inset-0 z-40 bg-slate-900/30 animate-fade-in" onClick={closeDrawer} />
+          <div className="absolute bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl animate-slide-up pb-6">
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-8 h-1 rounded-full bg-slate-200" />
+            </div>
+
+            <div className="flex items-center justify-between px-5 py-3">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ backgroundColor: STATUS_COLORS[drawerNozzle.status] }}
+                >
+                  <span className="text-base font-black text-white">
+                    {String(drawerNozzle.id % 100).padStart(2, '0')}
+                  </span>
+                </div>
+                <div>
+                  <div className="font-bold text-slate-900 text-base">
+                    Pump {Math.floor(drawerNozzle.id / 100)} · Nozzle {drawerNozzle.id % 100}
+                  </div>
+                  <div className="text-xs font-semibold" style={{ color: STATUS_COLORS[drawerNozzle.status] }}>
+                    {drawerNozzle.status}
+                  </div>
+                </div>
+              </div>
+              <button onClick={closeDrawer} className="p-2 rounded-full text-slate-400 hover:bg-slate-50 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="mx-5 rounded-xl border border-slate-100 overflow-hidden mb-4">
+              {[
+                { label: 'Product',   value: getFuelName(drawerNozzle.product) },
+                { label: 'Price/L',   value: drawerNozzle.ppu },
+                { label: 'Totalizer', value: drawerNozzle.totalizer },
+              ].map((row) => (
+                <div key={row.label} className="flex justify-between px-4 py-2.5 border-b border-slate-100 bg-white">
+                  <span className="text-xs text-slate-500 font-medium">{row.label}</span>
+                  <span className="text-xs font-bold text-slate-800">{row.value}</span>
+                </div>
+              ))}
+
+              {/* Volume */}
+              <div className="border-b border-slate-100 bg-white">
+                <div className="flex justify-between items-center px-4 py-2.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-slate-500 font-medium">Volume</span>
+                    {showsDailyTotals(drawerNozzle.status) && (
+                      <button
+                        onClick={() => toggleTooltip('volume')}
+                        className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors shrink-0 ${
+                          tooltipField === 'volume' ? 'border-[#3271ae] text-[#3271ae]' : 'border-slate-300 text-slate-400'
+                        }`}
+                      >
+                        <Info size={9} />
+                      </button>
+                    )}
+                  </div>
+                  <span className="text-xs font-bold text-slate-800">
+                    {showsDailyTotals(drawerNozzle.status) ? drawerNozzle.dailyVolume : drawerNozzle.volume}
+                  </span>
+                </div>
+                {tooltipField === 'volume' && (
+                  <div className="px-4 pb-2.5 -mt-1">
+                    <div className="text-[10px] text-[#3271ae] bg-[#3271ae]/8 rounded-lg px-2.5 py-1.5 font-medium">
+                      Total volume dispensed today on this nozzle
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Amount */}
+              <div className="bg-white">
+                <div className="flex justify-between items-center px-4 py-2.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-slate-500 font-medium">Amount</span>
+                    {showsDailyTotals(drawerNozzle.status) && (
+                      <button
+                        onClick={() => toggleTooltip('amount')}
+                        className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors shrink-0 ${
+                          tooltipField === 'amount' ? 'border-[#3271ae] text-[#3271ae]' : 'border-slate-300 text-slate-400'
+                        }`}
+                      >
+                        <Info size={9} />
+                      </button>
+                    )}
+                  </div>
+                  <span className="text-xs font-bold text-slate-800">
+                    {showsDailyTotals(drawerNozzle.status) ? drawerNozzle.dailySales : drawerNozzle.amount}
+                  </span>
+                </div>
+                {tooltipField === 'amount' && (
+                  <div className="px-4 pb-2.5 -mt-1">
+                    <div className="text-[10px] text-[#3271ae] bg-[#3271ae]/8 rounded-lg px-2.5 py-1.5 font-medium">
+                      Total sales collected today on this nozzle
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Status-contextual actions */}
+            <div className="px-5 flex gap-2">
+              {drawerNozzle.status === 'Fueling' && (
+                <button
+                  className="flex-1 h-11 rounded-xl bg-orange-500 text-white text-sm font-bold active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+                  onClick={() => { updateNozzleStatus(drawerNozzle, 'Suspended'); showToast?.('Nozzle suspended'); closeDrawer(); }}
+                >
+                  <PauseCircle size={16} /> Suspend
+                </button>
+              )}
+              {drawerNozzle.status === 'Error' && (
+                <button
+                  className="flex-1 h-11 rounded-xl bg-red-500 text-white text-sm font-bold active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+                  onClick={() => { updateNozzleStatus(drawerNozzle, 'Idle'); showToast?.('Error acknowledged'); closeDrawer(); }}
+                >
+                  <AlertTriangle size={16} /> Acknowledge
+                </button>
+              )}
+              {drawerNozzle.status === 'Suspended' && (
+                <button
+                  className="flex-1 h-11 rounded-xl bg-[#3271ae] text-white text-sm font-bold active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+                  onClick={() => { updateNozzleStatus(drawerNozzle, 'Idle'); showToast?.('Nozzle resumed'); closeDrawer(); }}
+                >
+                  <Zap size={16} /> Resume
+                </button>
+              )}
+              <button
+                className="h-11 px-4 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold active:scale-[0.98] transition-transform"
+                onClick={closeDrawer}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Cashier shift summary drawer ── */}
+      {cashierDrawerOpen && (
+        <>
+          <div
+            className="absolute inset-0 z-40 bg-slate-900/30 animate-fade-in"
+            onClick={() => setCashierDrawerOpen(false)}
+          />
+          <div className="absolute bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl animate-slide-up">
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-8 h-1 rounded-full bg-slate-200" />
+            </div>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#3271ae]/10 flex items-center justify-center">
+                  <User size={18} className="text-[#3271ae]" />
+                </div>
+                <div>
+                  <div className="font-bold text-slate-900 text-base">Dara Chan</div>
+                  <div className="text-xs text-slate-400">{summary.shift} Shift · from {summary.startTime}</div>
+                </div>
+              </div>
+              <button
+                onClick={() => setCashierDrawerOpen(false)}
+                className="p-2 rounded-full text-slate-400 hover:bg-slate-50 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Scrollable content */}
+            <div className="overflow-y-auto max-h-[60vh] px-5 pb-8 flex flex-col gap-4">
+
+              {/* Hero stats */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-[#3271ae]/5 border border-[#3271ae]/15 rounded-xl p-3 flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold text-[#3271ae] uppercase tracking-wide">Total Sales</span>
+                  <span className="text-xl font-black text-slate-900">${summary.totalSales.toFixed(2)}</span>
+                  <span className="text-[10px] text-slate-400">{summary.currency}</span>
+                </div>
+                <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">Total Volume</span>
+                  <span className="text-xl font-black text-slate-900">{summary.totalVolume.toFixed(1)}</span>
+                  <span className="text-[10px] text-slate-400">Litres</span>
+                </div>
+              </div>
+
+              {/* By Product */}
+              <div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">By Product</div>
+                <div className="rounded-xl border border-slate-100 overflow-hidden">
+                  {/* Column headers */}
+                  <div className="flex items-center px-3 py-1.5 bg-slate-50 border-b border-slate-100">
+                    <span className="flex-1 text-[10px] text-slate-400 font-semibold">Product</span>
+                    <span className="w-20 text-right text-[10px] text-slate-400 font-semibold">Sales</span>
+                    <span className="w-20 text-right text-[10px] text-slate-400 font-semibold">Volume</span>
+                  </div>
+                  {summary.byProduct.map((p, i) => (
+                    <div
+                      key={p.code}
+                      className={`flex items-center px-3 py-2.5 bg-white ${
+                        i < summary.byProduct.length - 1 ? 'border-b border-slate-50' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: getFuelColor(p.code) }}
+                        />
+                        <span className="text-xs font-semibold text-slate-700 truncate">{p.name}</span>
+                      </div>
+                      <span className="w-20 text-right text-xs font-bold text-slate-800">${p.sales.toFixed(2)}</span>
+                      <span className="w-20 text-right text-xs text-slate-500 font-mono">{p.volume.toFixed(1)}L</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* By MOP */}
+              <div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">By Payment Method</div>
+                <div className="rounded-xl border border-slate-100 overflow-hidden">
+                  <div className="flex items-center px-3 py-1.5 bg-slate-50 border-b border-slate-100">
+                    <span className="flex-1 text-[10px] text-slate-400 font-semibold">Method</span>
+                    <span className="w-16 text-right text-[10px] text-slate-400 font-semibold">Txns</span>
+                    <span className="w-20 text-right text-[10px] text-slate-400 font-semibold">Sales</span>
+                  </div>
+                  {summary.byMOP.map((m, i) => (
+                    <div
+                      key={m.method}
+                      className={`flex items-center px-3 py-2.5 bg-white ${
+                        i < summary.byMOP.length - 1 ? 'border-b border-slate-50' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <span className="text-slate-400 shrink-0">{MOP_ICONS[m.method]}</span>
+                        <span className="text-xs font-semibold text-slate-700">{m.method}</span>
+                      </div>
+                      <span className="w-16 text-right text-xs text-slate-500">{m.count} txn</span>
+                      <span className="w-20 text-right text-xs font-bold text-slate-800">${m.sales.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
-

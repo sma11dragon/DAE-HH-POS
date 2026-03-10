@@ -18,13 +18,12 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({ children }) => {
           </p>
         </div>
 
-        {/* The Device */}
-        {/* h-[90vh] ensures it fits on screen, aspect ratio keeps phone shape */}
-        <div className="relative border-gray-800 bg-gray-800 border-[10px] md:border-[14px] rounded-[2.5rem] h-[90vh] max-h-[850px] aspect-[9/19] shadow-2xl flex flex-col shrink-0">
-          {/* Camera notch simulation */}
-          <div className="h-[32px] w-[3px] bg-gray-800 absolute -left-[13px] md:-left-[17px] top-[72px] rounded-l-lg"></div>
-          <div className="h-[46px] w-[3px] bg-gray-800 absolute -left-[13px] md:-left-[17px] top-[124px] rounded-l-lg"></div>
-          <div className="h-[64px] w-[3px] bg-gray-800 absolute -right-[13px] md:-right-[17px] top-[142px] rounded-r-lg"></div>
+        {/* The Device — fixed 360×800 logical pixels = Sunmi P3 at 2× DPR */}
+        <div className="relative border-gray-800 bg-gray-800 border-[12px] rounded-[2.5rem] w-[360px] min-w-[360px] max-w-[360px] aspect-[9/20] shadow-2xl flex flex-col shrink-0">
+          {/* Side button simulation */}
+          <div className="h-[32px] w-[3px] bg-gray-800 absolute -left-[15px] top-[72px] rounded-l-lg"></div>
+          <div className="h-[46px] w-[3px] bg-gray-800 absolute -left-[15px] top-[124px] rounded-l-lg"></div>
+          <div className="h-[64px] w-[3px] bg-gray-800 absolute -right-[15px] top-[142px] rounded-r-lg"></div>
           
           <div className="rounded-[1.8rem] overflow-hidden w-full h-full bg-white relative flex flex-col">
             {children}
