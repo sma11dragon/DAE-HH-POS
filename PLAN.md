@@ -162,12 +162,24 @@
 
 ---
 
+## ✅ Session 12 — GitHub + Cloudflare Deployment
+
+- [x] **GitHub repo created** — `github.com/sma11dragon/DAE-HH-POS` (public)
+- [x] **CLAUDE.md updated** — corrected brand color, Screen enum, key files, bottom sheet pattern
+- [x] **All code pushed** — 31 files, full prototype committed to `main`
+- [x] **Cloudflare Pages deployed** — auto-deploy on every push to `main`
+  - Pages URL: https://dae-hh-pos.pages.dev
+  - Build command: `npm run build` / Output: `dist`
+- [x] **Custom domain live** — https://hhpos.daeit.com.sg (CNAME auto-added via Cloudflare)
+
+---
+
 ## ▶️ Next Steps
 
-> **Session 11 complete.**
+> **Session 12 complete.**
 >
 > **Do NOT execute any task until user explicitly says so.**
 
 ---
 
-*Last updated: Session 11 — Member lookup & registration modal*
+*Last updated: Session 12 — GitHub repo + Cloudflare Pages deployment*
