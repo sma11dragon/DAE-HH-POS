@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Transaction, TransactionItem } from '../types';
-import { Button, Card } from '../components/UI';
+import { Button } from '../components/UI';
 import { DAEIconMark } from '../components/DAELogo';
 import { MOCK_COUPONS } from '../mockData';
 import {
@@ -23,6 +23,9 @@ import {
   UserPlus,
   Star,
   AtSign,
+  Minus,
+  Plus,
+  Trash2,
 } from 'lucide-react';
 
 interface MockMember {
@@ -57,6 +60,7 @@ interface TransactionDetailProps {
 
 interface ReceiptItem {
   id: number;
+  originalId?: number; // original TransactionItem id for editable items
   name: string;
   type: 'Fuel' | 'Product';
   qty: number;
@@ -77,6 +81,25 @@ export const TransactionDetailScreen: React.FC<TransactionDetailProps> = ({
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [showCouponModal, setShowCouponModal] = useState(false);
+
+  // Editable copy of additional (non-fuel) items
+  const [editableItems, setEditableItems] = useState<TransactionItem[]>(
+    transaction.additionalItems || []
+  );
+
+  const updateItemQty = (id: number, delta: number) => {
+    setEditableItems(prev => {
+      const item = prev.find(i => i.id === id);
+      if (!item) return prev;
+      const newQty = item.qty + delta;
+      if (newQty <= 0) return prev.filter(i => i.id !== id);
+      return prev.map(i => i.id === id ? { ...i, qty: newQty } : i);
+    });
+  };
+
+  const deleteItem = (id: number) => {
+    setEditableItems(prev => prev.filter(i => i.id !== id));
+  };
   const [memberId, setMemberId] = useState('');
   const [memberLookedUp, setMemberLookedUp] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<typeof MOCK_COUPONS[0] | null>(null);
@@ -129,7 +152,7 @@ export const TransactionDetailScreen: React.FC<TransactionDetailProps> = ({
 
   const fuelTotal = parseFloat(transaction.amount.replace('$', ''));
 
-  const baseReceiptItems: ReceiptItem[] = [
+  const baseReceiptItems: ReceiptItem[] = transaction.isMerchandiseOnly ? [] : [
     {
       id: 1,
       name: transaction.product || 'Fuel',
@@ -149,9 +172,10 @@ export const TransactionDetailScreen: React.FC<TransactionDetailProps> = ({
     }] : []),
   ];
 
-  // Additional items from Fast Key
-  const addedItems: ReceiptItem[] = (transaction.additionalItems || []).map((item: TransactionItem) => ({
+  // Additional items from Fast Key — driven by editable local state
+  const addedItems: ReceiptItem[] = editableItems.map((item: TransactionItem) => ({
     id: item.id + 100,
+    originalId: item.id,
     name: item.name,
     type: 'Product' as const,
     qty: item.qty,
@@ -208,68 +232,97 @@ export const TransactionDetailScreen: React.FC<TransactionDetailProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 pb-6">
-
-        {/* Total Due Hero */}
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col items-center gap-1">
+      {/* Total Due Hero — expanded with breakdown */}
+      <div className="shrink-0 mx-4 mt-4 mb-1 bg-amber-50 border border-amber-200 rounded-2xl overflow-hidden">
+        {/* Amount + ID */}
+        <div className="px-4 pt-4 pb-3 flex flex-col items-center gap-1">
           <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Total Due</span>
           <span className="text-4xl font-black text-slate-900">${total.toFixed(2)}</span>
           <span className="text-[10px] text-slate-400 font-mono">{transaction.id} • {transaction.time}</span>
-          {appliedCoupon && (
-            <div className="mt-1 px-2 py-0.5 bg-emerald-100 rounded-full flex items-center gap-1">
-              <Tag size={10} className="text-emerald-600" />
-              <span className="text-[10px] font-semibold text-emerald-700">{appliedCoupon.label} applied</span>
+        </div>
+        {/* Breakdown rows */}
+        <div className="border-t border-amber-200/60 bg-white/50 px-4 py-2.5 flex flex-col gap-1.5">
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-slate-500">Subtotal</span>
+            <span className="text-xs font-semibold text-slate-700">${subtotal.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-slate-500">Tax (7%)</span>
+            <span className="text-xs font-semibold text-slate-700">${tax.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-slate-400">VAT</span>
+            <span className="text-xs text-slate-400">Incl.</span>
+          </div>
+          {appliedCoupon ? (
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-1">
+                <Tag size={10} className="text-emerald-600" />
+                <span className="text-xs text-emerald-600 font-medium">{appliedCoupon.label}</span>
+              </div>
+              <span className="text-xs font-semibold text-emerald-600">−${couponDiscount.toFixed(2)}</span>
+            </div>
+          ) : (
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-slate-400">Discount</span>
+              <span className="text-xs text-slate-400">—</span>
             </div>
           )}
         </div>
+      </div>
 
-        {/* Receipt Items */}
-        <Card className="flex flex-col overflow-hidden border border-slate-200 shadow-sm">
-          {/* Line Items */}
-          <div className="p-4 flex flex-col gap-3 bg-white">
-            {receiptItems.map((item) => (
-              <div key={item.id} className="flex justify-between items-start gap-2">
+      {/* Line Items — scrollable */}
+      <div className="flex-1 overflow-y-auto px-4 py-3">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col divide-y divide-slate-100">
+          {receiptItems.length === 0 && (
+            <div className="p-4 text-sm text-slate-400 text-center">No items</div>
+          )}
+          {receiptItems.map((item) => (
+            <div key={item.id} className="px-4 py-3">
+              <div className="flex justify-between items-start gap-2">
                 <div className="flex flex-col min-w-0 flex-1">
                   <span className="font-bold text-slate-800 text-sm truncate">{item.name}</span>
                   <span className="text-xs text-slate-500">
                     {item.type === 'Fuel'
                       ? `${item.qty.toFixed(2)}L @ $${item.price.toFixed(2)}/L`
-                      : `${item.qty} x $${item.price.toFixed(2)}`
+                      : `${item.qty} × $${item.price.toFixed(2)}`
                     }
                   </span>
                   {item.details && <span className="text-[10px] text-slate-400 mt-0.5">{item.details}</span>}
                 </div>
-                <span className="font-bold text-slate-900 text-sm">${item.total.toFixed(2)}</span>
+                <span className="font-bold text-slate-900 text-sm shrink-0">${item.total.toFixed(2)}</span>
               </div>
-            ))}
-          </div>
+              {/* Qty controls — only for editable (non-fuel) items */}
+              {item.type === 'Product' && item.originalId !== undefined && (
+                <div className="flex items-center gap-2 mt-2">
+                  <button
+                    onClick={() => updateItemQty(item.originalId!, -1)}
+                    className="w-8 h-8 rounded-full border border-slate-200 bg-white flex items-center justify-center text-slate-600 active:scale-90 transition-transform shadow-sm"
+                  >
+                    <Minus size={12} />
+                  </button>
+                  <span className="text-sm font-black text-[#3271ae] w-5 text-center">{item.qty}</span>
+                  <button
+                    onClick={() => updateItemQty(item.originalId!, 1)}
+                    className="w-8 h-8 rounded-full bg-[#3271ae] flex items-center justify-center text-white active:scale-90 transition-transform shadow-sm"
+                  >
+                    <Plus size={12} />
+                  </button>
+                  <button
+                    onClick={() => deleteItem(item.originalId!)}
+                    className="ml-auto w-8 h-8 rounded-full border border-red-200 bg-red-50 flex items-center justify-center text-red-500 active:scale-90 transition-transform"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
 
-          {/* Summary */}
-          <div className="bg-slate-50 border-t border-slate-100 px-4 py-3 flex flex-col gap-1.5 text-xs">
-            <div className="flex justify-between text-slate-500">
-              <span>Subtotal</span>
-              <span>${subtotal.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-slate-500">
-              <span>Tax (7%)</span>
-              <span>${tax.toFixed(2)}</span>
-            </div>
-            {appliedCoupon && (
-              <div className="flex justify-between text-emerald-600 font-medium">
-                <span>Coupon ({appliedCoupon.label})</span>
-                <span>-${couponDiscount.toFixed(2)}</span>
-              </div>
-            )}
-            <div className="border-t border-slate-200 my-0.5" />
-            <div className="flex justify-between font-bold text-slate-900 text-sm">
-              <span>Total</span>
-              <span>${total.toFixed(2)}</span>
-            </div>
-          </div>
-        </Card>
-
-        {/* Action Buttons */}
-        <div className="flex flex-col gap-2">
+      {/* Fixed bottom — always visible regardless of list length */}
+      <div className="shrink-0 px-4 pb-4 pt-3 bg-slate-50 border-t border-slate-100 flex flex-col gap-2">
           {/* Row 1: Coupon + Member + Add Items — hidden once payment flow is open */}
           {!showPaymentMethods && (
             <div className="flex gap-2">
@@ -296,29 +349,14 @@ export const TransactionDetailScreen: React.FC<TransactionDetailProps> = ({
                 onClick={onAddItems}
               >
                 <ShoppingBag size={14} />
-                Add Items
+                Shop
               </button>
             </div>
           )}
 
-          {/* Row 2: Payment CTA */}
-          <button
-            className={`w-full h-14 font-bold text-base rounded-xl shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2 ${
-              showPaymentMethods
-                ? 'bg-slate-100 text-slate-600 border border-slate-200'
-                : 'bg-[#FFC107] text-slate-900'
-            }`}
-            onClick={() => setShowPaymentMethods(!showPaymentMethods)}
-          >
-            <CreditCard size={20} />
-            {showPaymentMethods ? 'Cancel Payment' : 'Collect Payment'}
-          </button>
-        </div>
-
-        {/* Payment Methods (collapsible) */}
-        {showPaymentMethods && (
-          <div className="flex flex-col gap-2 pb-2">
-            <div className="grid grid-cols-2 gap-2">
+          {/* Payment Methods grid — shown above buttons when open */}
+          {showPaymentMethods && (
+            <div className="grid grid-cols-2 gap-2 pb-1">
               {[
                 { label: 'QR Code', sub: 'Scan to pay', icon: <QrCode size={18} />, bg: 'bg-slate-100', color: 'text-slate-600', method: 'QR Code' },
                 { label: 'Cash', sub: 'Pay at counter', icon: <Banknote size={18} />, bg: 'bg-emerald-50', color: 'text-emerald-600', method: 'Cash' },
@@ -338,8 +376,25 @@ export const TransactionDetailScreen: React.FC<TransactionDetailProps> = ({
                 </button>
               ))}
             </div>
+          )}
+
+          {/* Row 2: Cancel + Pay Now — always side by side */}
+          <div className="flex gap-2">
+            <button
+              className="flex-1 h-14 font-bold text-base rounded-xl shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2 bg-red-500 text-white"
+              onClick={() => showPaymentMethods ? setShowPaymentMethods(false) : onBack()}
+            >
+              <X size={20} />
+              Cancel
+            </button>
+            <button
+              className="flex-1 h-14 font-bold text-base rounded-xl shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2 bg-[#FFC107] text-slate-900"
+              onClick={() => setShowPaymentMethods(true)}
+            >
+              <CreditCard size={20} />
+              Pay Now
+            </button>
           </div>
-        )}
       </div>
 
       {/* Coupon / Member Modal */}

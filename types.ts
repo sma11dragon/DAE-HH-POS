@@ -29,6 +29,7 @@ export interface Transaction {
   volume?: string;
   paymentMethod?: string;
   additionalItems?: TransactionItem[];
+  isMerchandiseOnly?: boolean;
 }
 
 export interface FuelProduct {

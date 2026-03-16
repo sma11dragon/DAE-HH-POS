@@ -1,30 +1,41 @@
 import { Nozzle, Transaction, FuelProduct, FastKeyItem, Coupon } from './types';
 
-// --- Nozzles (3 pumps × 6 nozzles) ---
+// --- Nozzles (6 pumps × 4 nozzles = 3 physical dispensers × 2 sides A/B) ---
 // ID scheme: pump × 100 + position (e.g. 102 = Pump 1, Nozzle 2)
-// Products: R90 / R92 / R95 / Diesel  (2 arms per grade per pump, typical Vivo layout)
+// Dispenser 1: Pump 1 (Side A) + Pump 2 (Side B)
+// Dispenser 2: Pump 3 (Side A) + Pump 4 (Side B)
+// Dispenser 3: Pump 5 (Side A) + Pump 6 (Side B)
 export const MOCK_NOZZLES: Nozzle[] = [
-  // Pump 1
-  { id: 101, product: 'R90',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.88/L', totalizer: '14,820.3L', dailyVolume: '342.5L',  dailySales: '$301.4'  },
-  { id: 102, product: 'R90',    volume: '12.50L', amount: '$11.00', status: 'Fueling',   ppu: '$0.88/L', totalizer: '9,304.7L',  dailyVolume: '218.0L',  dailySales: '$191.8'  },
-  { id: 103, product: 'R92',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.97/L', totalizer: '6,112.0L',  dailyVolume: '95.4L',   dailySales: '$92.5'   },
-  { id: 104, product: 'Diesel', volume: '45.20L', amount: '$42.04', status: 'Payment',   ppu: '$0.93/L', totalizer: '22,445.6L', dailyVolume: '580.8L',  dailySales: '$540.1'  },
-  { id: 105, product: 'R95',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$1.12/L', totalizer: '3,210.8L',  dailyVolume: '64.0L',   dailySales: '$71.7'   },
-  { id: 106, product: 'R95',    volume: '0.00L',  amount: '$0.00',  status: 'Offline',   ppu: '$1.12/L', totalizer: '8,901.2L',  dailyVolume: '0.0L',    dailySales: '$0.00'   },
-  // Pump 2
-  { id: 201, product: 'R90',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.88/L', totalizer: '11,234.5L', dailyVolume: '287.3L',  dailySales: '$252.8'  },
-  { id: 202, product: 'R92',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.97/L', totalizer: '7,890.1L',  dailyVolume: '176.6L',  dailySales: '$171.3'  },
-  { id: 203, product: 'R95',    volume: '5.20L',  amount: '$5.82',  status: 'Payment',   ppu: '$1.12/L', totalizer: '5,567.3L',  dailyVolume: '88.1L',   dailySales: '$98.7'   },
-  { id: 204, product: 'Diesel', volume: '0.00L',  amount: '$0.00',  status: 'Error',     ppu: '$0.93/L', totalizer: '18,002.9L', dailyVolume: '110.4L',  dailySales: '$102.7'  },
-  { id: 205, product: 'Diesel', volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.93/L', totalizer: '2,780.4L',  dailyVolume: '52.2L',   dailySales: '$48.5'   },
-  { id: 206, product: 'R92',    volume: '0.00L',  amount: '$0.00',  status: 'Suspended', ppu: '$0.97/L', totalizer: '6,344.0L',  dailyVolume: '44.8L',   dailySales: '$43.5'   },
-  // Pump 3
-  { id: 301, product: 'R90',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.88/L', totalizer: '9,100.6L',  dailyVolume: '193.7L',  dailySales: '$170.5'  },
-  { id: 302, product: 'R92',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.97/L', totalizer: '5,430.2L',  dailyVolume: '141.0L',  dailySales: '$136.8'  },
-  { id: 303, product: 'R95',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$1.12/L', totalizer: '4,218.7L',  dailyVolume: '72.3L',   dailySales: '$81.0'   },
-  { id: 304, product: 'Diesel', volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.93/L', totalizer: '16,770.3L', dailyVolume: '430.5L',  dailySales: '$400.4'  },
-  { id: 305, product: 'R90',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.88/L', totalizer: '1,995.5L',  dailyVolume: '38.6L',   dailySales: '$34.0'   },
-  { id: 306, product: 'R92',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.97/L', totalizer: '7,654.1L',  dailyVolume: '121.9L',  dailySales: '$118.2'  },
+  // Pump 1 — Dispenser 1, Side A (R90 × 2, R92 × 2)
+  { id: 101, product: 'R90',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.88/L', totalizer: '14,820.3L', dailyVolume: '342.5L', dailySales: '$301.4' },
+  { id: 102, product: 'R90',    volume: '12.50L', amount: '$11.00', status: 'Fueling',   ppu: '$0.88/L', totalizer: '9,304.7L',  dailyVolume: '218.0L', dailySales: '$191.8' },
+  { id: 103, product: 'R92',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.97/L', totalizer: '6,112.0L',  dailyVolume: '95.4L',  dailySales: '$92.5'  },
+  { id: 104, product: 'Diesel', volume: '45.20L', amount: '$42.04', status: 'Payment',   ppu: '$0.93/L', totalizer: '22,445.6L', dailyVolume: '580.8L', dailySales: '$540.1' },
+  // Pump 2 — Dispenser 1, Side B (R90, R92, R95, Diesel)
+  { id: 201, product: 'R90',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.88/L', totalizer: '11,234.5L', dailyVolume: '287.3L', dailySales: '$252.8' },
+  { id: 202, product: 'R92',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.97/L', totalizer: '7,890.1L',  dailyVolume: '176.6L', dailySales: '$171.3' },
+  { id: 203, product: 'R95',    volume: '5.20L',  amount: '$5.82',  status: 'Payment',   ppu: '$1.12/L', totalizer: '5,567.3L',  dailyVolume: '88.1L',  dailySales: '$98.7'  },
+  { id: 204, product: 'Diesel', volume: '0.00L',  amount: '$0.00',  status: 'Error',     ppu: '$0.93/L', totalizer: '18,002.9L', dailyVolume: '110.4L', dailySales: '$102.7' },
+  // Pump 3 — Dispenser 2, Side A (R92 × 2, R95 × 2)
+  { id: 301, product: 'R92',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.97/L', totalizer: '9,100.6L',  dailyVolume: '193.7L', dailySales: '$187.9' },
+  { id: 302, product: 'R92',    volume: '0.00L',  amount: '$0.00',  status: 'Suspended', ppu: '$0.97/L', totalizer: '5,430.2L',  dailyVolume: '141.0L', dailySales: '$136.8' },
+  { id: 303, product: 'R95',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$1.12/L', totalizer: '4,218.7L',  dailyVolume: '72.3L',  dailySales: '$81.0'  },
+  { id: 304, product: 'R95',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$1.12/L', totalizer: '2,110.5L',  dailyVolume: '44.0L',  dailySales: '$49.3'  },
+  // Pump 4 — Dispenser 2, Side B (R90 × 2, Diesel × 2)
+  { id: 401, product: 'R90',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.88/L', totalizer: '8,750.0L',  dailyVolume: '165.2L', dailySales: '$145.4' },
+  { id: 402, product: 'R90',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.88/L', totalizer: '6,321.4L',  dailyVolume: '98.6L',  dailySales: '$86.8'  },
+  { id: 403, product: 'Diesel', volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.93/L', totalizer: '16,770.3L', dailyVolume: '430.5L', dailySales: '$400.4' },
+  { id: 404, product: 'Diesel', volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.93/L', totalizer: '1,995.5L',  dailyVolume: '38.6L',  dailySales: '$35.9'  },
+  // Pump 5 — Dispenser 3, Side A (R92 × 2, Diesel × 2)
+  { id: 501, product: 'R92',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.97/L', totalizer: '6,344.0L',  dailyVolume: '44.8L',  dailySales: '$43.5'  },
+  { id: 502, product: 'R92',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.97/L', totalizer: '7,654.1L',  dailyVolume: '121.9L', dailySales: '$118.2' },
+  { id: 503, product: 'Diesel', volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.93/L', totalizer: '2,780.4L',  dailyVolume: '52.2L',  dailySales: '$48.5'  },
+  { id: 504, product: 'Diesel', volume: '0.00L',  amount: '$0.00',  status: 'Offline',   ppu: '$0.93/L', totalizer: '1,200.0L',  dailyVolume: '0.0L',   dailySales: '$0.00'  },
+  // Pump 6 — Dispenser 3, Side B (R90 × 2, R95 × 2)
+  { id: 601, product: 'R90',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.88/L', totalizer: '5,210.8L',  dailyVolume: '87.4L',  dailySales: '$76.9'  },
+  { id: 602, product: 'R90',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$0.88/L', totalizer: '3,900.2L',  dailyVolume: '61.3L',  dailySales: '$54.0'  },
+  { id: 603, product: 'R95',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$1.12/L', totalizer: '2,560.1L',  dailyVolume: '34.5L',  dailySales: '$38.6'  },
+  { id: 604, product: 'R95',    volume: '0.00L',  amount: '$0.00',  status: 'Idle',      ppu: '$1.12/L', totalizer: '1,830.7L',  dailyVolume: '22.1L',  dailySales: '$24.8'  },
 ];
 
 // --- Pending (unpaid) transactions shown on Home ---

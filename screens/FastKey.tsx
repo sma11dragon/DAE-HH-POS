@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Transaction, TransactionItem } from '../types';
 import { DAEIconMark } from '../components/DAELogo';
 import { ArrowLeft, Plus, Minus, CheckCircle2 } from 'lucide-react';
 import { MOCK_FAST_KEY_ITEMS } from '../mockData';
+import { useAppContext } from '../AppContext';
 
 interface FastKeyScreenProps {
   onBack: () => void;
@@ -11,7 +12,7 @@ interface FastKeyScreenProps {
 }
 
 export const FastKeyScreen: React.FC<FastKeyScreenProps> = ({ onBack, sourceTransaction, onItemsConfirmed }) => {
-  const [cart, setCart] = useState<Record<number, number>>({}); // itemId → qty
+  const { cart, setCart, cartCount } = useAppContext();
 
   const addItem = (id: number) => setCart(c => ({ ...c, [id]: (c[id] || 0) + 1 }));
   const removeItem = (id: number) => setCart(c => {
@@ -21,13 +22,13 @@ export const FastKeyScreen: React.FC<FastKeyScreenProps> = ({ onBack, sourceTran
     return next;
   });
 
-  const cartCount = Object.values(cart).reduce((a, b) => a + b, 0);
   const cartTotal = MOCK_FAST_KEY_ITEMS.reduce((sum, item) => sum + (cart[item.id] || 0) * item.price, 0);
 
   const handleConfirm = () => {
     const items: TransactionItem[] = MOCK_FAST_KEY_ITEMS
       .filter(item => cart[item.id])
       .map(item => ({ id: item.id, name: item.name, qty: cart[item.id], price: item.price }));
+    setCart({}); // always clear cart once items are confirmed
     onItemsConfirmed(items);
   };
 
@@ -125,7 +126,7 @@ export const FastKeyScreen: React.FC<FastKeyScreenProps> = ({ onBack, sourceTran
             className="flex items-center gap-2 px-5 py-3 bg-[#FFC107] text-slate-900 rounded-xl font-bold text-sm active:scale-95 transition-transform shadow-md"
           >
             <CheckCircle2 size={16} />
-            {isLinkedToTransaction ? 'Add to Bill' : 'Done'}
+            {isLinkedToTransaction ? 'Add to Bill' : 'Checkout'}
           </button>
         </div>
       )}

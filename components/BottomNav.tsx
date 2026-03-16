@@ -1,7 +1,8 @@
 import React from 'react';
-import { FileText, Tag, Settings } from 'lucide-react';
+import { FileText, Tag, Settings, ShoppingCart } from 'lucide-react';
 import { Screen } from '../types';
 import { DAEIconMark } from './DAELogo';
+import { useAppContext } from '../AppContext';
 
 interface BottomNavProps {
   currentScreen: Screen;
@@ -9,7 +10,9 @@ interface BottomNavProps {
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({ currentScreen, onNavigate }) => {
+  const { cartCount } = useAppContext();
   const isHome = currentScreen === Screen.HOME || currentScreen === Screen.PUMP_DETAIL;
+  const isCart = currentScreen === Screen.FAST_KEY;
 
   const itemClass = (active: boolean) =>
     `flex flex-col items-center justify-center py-2 px-1 flex-1 transition-all duration-150 ${
@@ -50,6 +53,22 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentScreen, onNavigate 
           <DAEIconMark size={22} color={isHome ? '#3271ae' : 'white'} />
         </div>
         <span className={`text-[10px] font-bold mt-0.5 ${isHome ? 'text-[#FFC107]' : 'text-white/60'}`}>Home</span>
+      </button>
+
+      {/* Cart */}
+      <button
+        onClick={() => onNavigate(Screen.FAST_KEY)}
+        className={`${itemClass(isCart)} relative`}
+      >
+        <div className="relative">
+          <ShoppingCart size={20} strokeWidth={isCart ? 2.5 : 1.8} />
+          {cartCount > 0 && (
+            <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-0.5 rounded-full bg-red-500 flex items-center justify-center text-[9px] font-black text-white leading-none">
+              {cartCount > 99 ? '99+' : cartCount}
+            </span>
+          )}
+        </div>
+        <span className="text-[10px] font-medium mt-0.5">Cart</span>
       </button>
 
       {/* Settings */}

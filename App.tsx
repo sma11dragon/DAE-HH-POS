@@ -60,6 +60,7 @@ const App: React.FC = () => {
   // Called when FastKey confirms items for a transaction
   const handleFastKeyItemsAdded = (items: TransactionItem[]) => {
     if (fastKeySourceTransaction) {
+      // Linked to a fuel transaction — merge items and go back to payment screen
       const updatedTxn: Transaction = {
         ...fastKeySourceTransaction,
         additionalItems: [...(fastKeySourceTransaction.additionalItems || []), ...items],
@@ -68,7 +69,22 @@ const App: React.FC = () => {
       setFastKeySourceTransaction(null);
       setCurrentScreen(Screen.TRANSACTION_DETAIL);
     } else {
-      setCurrentScreen(Screen.HOME);
+      // Standalone cart checkout — build a merchandise-only transaction and go to payment
+      const itemsTotal = items.reduce((sum, i) => sum + i.qty * i.price, 0);
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      const checkoutTxn: Transaction = {
+        id: `SHOP-${now.getTime().toString().slice(-5)}`,
+        time: timeStr,
+        type: 'Sale',
+        staff: 'Dara Chan',
+        amount: `$${itemsTotal.toFixed(2)}`,
+        status: 'Pending',
+        isMerchandiseOnly: true,
+        additionalItems: items,
+      };
+      setSelectedTransaction(checkoutTxn);
+      setCurrentScreen(Screen.TRANSACTION_DETAIL);
     }
   };
 
